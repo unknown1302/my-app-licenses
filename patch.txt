@@ -1,0 +1,3 @@
+- Added feature X
+- Fixed bug Y
+- Improved speed
