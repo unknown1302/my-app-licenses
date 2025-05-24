@@ -7,7 +7,7 @@ VersionURL     := "https://raw.githubusercontent.com/unknown1302/my-app-licenses
 ScriptURL      := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/Sample3.ahk"
 IniFile        := A_ScriptDir "\version.ini"
 
-;Latest version try auto update
+
 
 CheckForUpdate() {
     global CurrentVersion, VersionURL, ScriptURL, IniFile
@@ -24,25 +24,27 @@ CheckForUpdate() {
     if (!remoteVersion || remoteVersion = "")
         return
     if (remoteVersion != savedVersion) && (remoteVersion != CurrentVersion) {
-        ; Download new version and overwrite this script
-        try {
-            whr := ComObject("WinHttp.WinHttpRequest.5.1")
-            whr.Open("GET", ScriptURL)
-            whr.Send()
-            whr.WaitForResponse()
-            FileDelete(A_ScriptFullPath)
-            file := FileOpen(A_ScriptFullPath, "w")
-            file.Write(whr.ResponseText)
-            file.Close()
-            IniWrite(remoteVersion, IniFile, "Update", "CurrentVersion")
-            MsgBox("? Script updated to v" remoteVersion ". Restarting now!")
-            Run('"' A_AhkPath '" "' A_ScriptFullPath '"')
-            ExitApp
-        } catch {
-            MsgBox("? Update failed. Please check your connection or permissions.", "Update Error", 0x10)
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        whr.Open("GET", ScriptURL)
+        whr.Send()
+        whr.WaitForResponse()
+        file := FileOpen(A_ScriptFullPath, "w")
+        if !file {
+            MsgBox("? Failed to write updated script.", "Update Error", 0x10)
             ExitApp
         }
-    }
+        file.Write(whr.ResponseText)
+        file.Close()
+        IniWrite(remoteVersion, IniFile, "Update", "CurrentVersion")
+        MsgBox("? Script updated to v" remoteVersion ". Restarting now!")
+        Run('"' A_AhkPath '" "' A_ScriptFullPath '"')
+        ExitApp
+    } catch {
+        MsgBox("? Update failed. Please check your connection or permissions.", "Update Error", 0x10)
+        ExitApp
+		}
+	}
 }
 CheckForUpdate()
 
