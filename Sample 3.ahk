@@ -2,13 +2,12 @@
 #SingleInstance Force
 
 CurrentVersion := "1"
-VersionURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/version.txt"          ; Edit this!
-ScriptURL  := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/Sample3.ahk"       ; Edit this!
+VersionURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/version.txt"
+ScriptURL  := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/Sample3.ahk"
 TempFile   := A_ScriptDir "\update_temp.ahk"
 
 CheckForUpdate() {
     global CurrentVersion, VersionURL, ScriptURL, TempFile
-    ; Step 1: Fetch the latest version number
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         whr.Open("GET", VersionURL)
@@ -21,12 +20,15 @@ CheckForUpdate() {
     if !latest or (latest = CurrentVersion)
         return  ; No update needed
 
-    ; Step 2: Download new script to temp file
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         whr.Open("GET", ScriptURL)
         whr.Send()
         whr.WaitForResponse()
+        if (whr.Status != 200) {
+            MsgBox("Update failed! Server returned: " whr.Status)
+            return
+        }
         file := FileOpen(TempFile, "w")
         if !IsObject(file)
             throw Error("Failed to open temp file for writing.")
@@ -37,9 +39,8 @@ CheckForUpdate() {
         return
     }
 
-    ; Step 3: Replace running script with update (after exit)
     try {
-        FileMove(TempFile, A_ScriptFullPath, true) ; true=overwrite
+        FileMove(TempFile, A_ScriptFullPath, true)
         MsgBox("Update complete! Script will now restart.")
         Run('"' A_AhkPath '" "' A_ScriptFullPath '"')
         ExitApp
@@ -52,5 +53,4 @@ CheckForUpdate() {
 ; --- Call the updater at script start ---
 CheckForUpdate()
 
-; --- Your main logic below ---
-MsgBox("Script is running! Version: " CurrentVersion)
+; --- Your main code here (license checks, GUI, etc) ---
