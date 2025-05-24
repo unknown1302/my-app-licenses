@@ -1,56 +1,65 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
-; === AUTO-UPDATE CONFIGURATION ===
+; --- CONFIG ---
 CurrentVersion := "1"
-VersionURL     := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/version.txt"
-ScriptURL      := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/Sample3.ahk"
-IniFile        := A_ScriptDir "\version.ini"
-
-
-
-CheckForUpdate() {
-    global CurrentVersion, VersionURL, ScriptURL, IniFile
-    try {
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        whr.Open("GET", VersionURL)
-        whr.Send()
-        whr.WaitForResponse()
-        remoteVersion := Trim(whr.ResponseText)
-    } catch {
-        remoteVersion := ""
-    }
-    savedVersion := IniRead(IniFile, "Update", "CurrentVersion", CurrentVersion)
-    if (!remoteVersion || remoteVersion = "")
-        return
-    if (remoteVersion != savedVersion) && (remoteVersion != CurrentVersion) {
-    try {
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        whr.Open("GET", ScriptURL)
-        whr.Send()
-        whr.WaitForResponse()
-        file := FileOpen(A_ScriptFullPath, "w")
-        if !file {
-            MsgBox("? Failed to write updated script.", "Update Error", 0x10)
-            ExitApp
-        }
-        file.Write(whr.ResponseText)
-        file.Close()
-        IniWrite(remoteVersion, IniFile, "Update", "CurrentVersion")
-        MsgBox("? Script updated to v" remoteVersion ". Restarting now!")
-        Run('"' A_AhkPath '" "' A_ScriptFullPath '"')
-        ExitApp
-    } catch {
-        MsgBox("? Update failed. Please check your connection or permissions.", "Update Error", 0x10)
-        ExitApp
-		}
-	}
-}
-CheckForUpdate()
-
-; === LICENSE CHECK LOGIC ===
+VersionURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/version.txt"
+PatchNotesURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/patch.txt"
+ScriptURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/Sample3.ahk"
 LicenseListURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/users.txt"
 
+; --- Version Check ---
+try {
+    http := ComObject("WinHttp.WinHttpRequest.5.1")
+    http.Open("GET", VersionURL)
+    http.SetRequestHeader("User-Agent", "Mozilla/5.0")
+    http.Send()
+    http.WaitForResponse()
+    urlversion := Trim(http.ResponseText, "`n")
+} catch {
+    urlversion := CurrentVersion
+}
+
+if (urlversion != CurrentVersion) {
+    ; Fetch patch notes
+    try {
+        patch := ComObject("WinHttp.WinHttpRequest.5.1")
+        patch.Open("GET", PatchNotesURL)
+        patch.SetRequestHeader("User-Agent", "Mozilla/5.0")
+        patch.Send()
+        patch.WaitForResponse()
+        patchnotes := Trim(patch.ResponseText, "`n")
+    } catch {
+        patchnotes := "(No patch notes available)"
+    }
+
+    answer := MsgBox(
+        "A new Version is available!`n`nUpdate now?`n`nPatchnotes:`n" patchnotes "`n`nCurrent Version: v" CurrentVersion " | Latest Version: v" urlversion,
+        "Application Update",
+        "YesNo Icon!"
+    )
+    if (answer = "Yes") {
+        try {
+            ; Download new script and run it
+            http := ComObject("WinHttp.WinHttpRequest.5.1")
+            http.Open("GET", ScriptURL)
+            http.SetRequestHeader("User-Agent", "Mozilla/5.0")
+            http.Send()
+            http.WaitForResponse()
+            file := FileOpen("Sample3_update.ahk", "w")
+            file.Write(http.ResponseText)
+            file.Close()
+            Run('"' A_AhkPath '" "Sample3_update.ahk"')
+            ExitApp
+        } catch {
+            MsgBox("Failed to download or run the update.", "Update Error", 0x10)
+            ExitApp
+        }
+    }
+    ; If "No", continue to license check
+}
+
+; --- LICENSE CHECK LOGIC ---
 GetHWID() {
     try {
         svc := ComObjGet("winmgmts:\\.\root\cimv2")
@@ -68,12 +77,12 @@ hwid := GetHWID()
 today := FormatTime(, "yyyyMMdd")
 
 try {
-    whr := ComObject("WinHttp.WinHttpRequest.5.1")
-    whr.Open("GET", LicenseListURL)
-    whr.SetRequestHeader("User-Agent", "Mozilla/5.0")
-    whr.Send()
-    whr.WaitForResponse()
-    usersTxt := whr.ResponseText
+    http := ComObject("WinHttp.WinHttpRequest.5.1")
+    http.Open("GET", LicenseListURL)
+    http.SetRequestHeader("User-Agent", "Mozilla/5.0")
+    http.Send()
+    http.WaitForResponse()
+    usersTxt := http.ResponseText
 } catch {
     MsgBox("Could not connect to the license server.`nCheck your internet connection.", "Error", 0x10)
     ExitApp
