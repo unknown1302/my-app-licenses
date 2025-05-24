@@ -1,15 +1,70 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 #SingleInstance Force
 
 ; === CONFIGURATION ===
 LicenseListURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/users.txt"
 VersionURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/version.txt"
-ScriptDownloadURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/Sample3.ahk" ; Change as needed
-CurrentVersion := "1" ; <--- Your local script version
+ScriptDownloadURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/Sample3.ahk"
+CurrentVersion := "1"
 
 ;Latest Update Testing
 
-; === GET HWID ===
+; === AUTO-UPDATE ===
+CheckForUpdate() {
+    global VersionURL, CurrentVersion, ScriptDownloadURL
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        whr.Open("GET", VersionURL)
+        whr.SetRequestHeader("User-Agent", "Mozilla/5.0")
+        whr.Send()
+        whr.WaitForResponse()
+        remoteVersion := Trim(whr.ResponseText)
+    } catch {
+        remoteVersion := ""
+    }
+    if (remoteVersion && remoteVersion != CurrentVersion) {
+        ; Download new EXE as update.tmp
+        try {
+            whr := ComObject("WinHttp.WinHttpRequest.5.1")
+            whr.Open("GET", ScriptDownloadURL)
+            whr.SetRequestHeader("User-Agent", "Mozilla/5.0")
+            whr.Send()
+            whr.WaitForResponse()
+            bytes := whr.ResponseBody
+            FileDelete("update.tmp")
+            f := FileOpen("update.tmp", "w")
+            f.RawWrite(bytes, bytes.Length)
+            f.Close()
+        } catch {
+            MsgBox("Failed to download update!", "Error", 0x10)
+            ExitApp
+        }
+        ; Write/Run updater script
+        updater :=
+        (
+        '#Requires AutoHotkey v2.0
+        oldFile := A_Args[1]
+        newFile := A_Args[2]
+        Sleep(1500)
+        Try {
+            FileDelete(oldFile)
+            FileMove(newFile, oldFile)
+            Run(' . Chr(34) . oldFile . Chr(34) . ')
+        } catch {
+            MsgBox("Failed to update application!", "Error", 0x10)
+        }
+        ExitApp
+        ')
+        FileDelete("updater.ahk")
+        FileAppend(updater, "updater.ahk")
+        Run('"' A_AhkPath '" "' A_ScriptDir '\updater.ahk" "' A_ScriptFullPath '" "update.tmp"')
+        ExitApp
+    }
+}
+
+CheckForUpdate()
+
+; === LICENSE CHECK ===
 GetHWID() {
     try {
         svc := ComObjGet("winmgmts:\\.\root\cimv2")
@@ -26,25 +81,6 @@ GetHWID() {
 hwid := GetHWID()
 today := FormatTime(, "yyyyMMdd")
 
-; === CHECK REMOTE VERSION ===
-try {
-    whr := ComObject("WinHttp.WinHttpRequest.5.1")
-    whr.Open("GET", VersionURL)
-    whr.SetRequestHeader("User-Agent", "Mozilla/5.0")
-    whr.Send()
-    whr.WaitForResponse()
-    remoteVersion := Trim(whr.ResponseText)
-} catch {
-    remoteVersion := ""
-}
-
-if (remoteVersion && remoteVersion != CurrentVersion) {
-    MsgBox("A new version (" remoteVersion ") is available!`nYou are running version " CurrentVersion ".`nPlease download the latest version.`n`nIf you want to update now, click OK to open the download page.", "Update Available", 0x40)
-    Run(ScriptDownloadURL)
-    ExitApp
-}
-
-; === FETCH LICENSE LIST ===
 try {
     whr := ComObject("WinHttp.WinHttpRequest.5.1")
     whr.Open("GET", LicenseListURL)
@@ -98,7 +134,7 @@ ShowWelcomeGui(clientName, licType, expiry, version) {
     myGui.AddText(, "Client: " clientName)
     myGui.AddText(, "Type: " licType)
     myGui.AddText(, "Expires: " expiry)
-    myGui.AddText(, "Script Version: " version)
+    myGui.AddText(, "Version: " version)
     myGui.AddButton("w120", "OK").OnEvent("Click", (*) => ExitApp())
     myGui.Show("w250 h190")
 }
