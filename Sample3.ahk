@@ -1,7 +1,8 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
-; --- Always Run as Admin ---
+; --------- [ ALWAYS RUN AS ADMIN ] ---------
+; If not running as admin, restart itself as admin and exit.
 if !A_IsAdmin {
     try {
         Run('*RunAs "' A_ScriptFullPath '"')
@@ -12,14 +13,19 @@ if !A_IsAdmin {
     }
 }
 
+; --------- [ VERSION & UPDATE CONSTANTS ] ---------
 CurrentVersion := "1"
-VersionURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/version.txt"
-ScriptURL  := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/Sample3.ahk"
-PatchNotesURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/patch.txt"
-TempFile   := A_ScriptDir "\update_temp.ahk"
+VersionURL     := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/version.txt"
+ScriptURL      := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/Sample3.ahk"
+PatchNotesURL  := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/patch.txt"
+TempFile       := A_ScriptDir "\update_temp.ahk"
 
+; --------- [ AUTO-UPDATE LOGIC ] ---------
 CheckForUpdate() {
     global CurrentVersion, VersionURL, ScriptURL, PatchNotesURL, TempFile
+
+    ; -- Step 1: Get Latest Version Number --
+    latest := ""
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         whr.Open("GET", VersionURL)
@@ -32,6 +38,7 @@ CheckForUpdate() {
     if !latest or (latest = CurrentVersion)
         return  ; No update needed
 
+    ; -- Step 2: Fetch Patch Notes (if available) --
     patchnotes := ""
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
@@ -46,10 +53,17 @@ CheckForUpdate() {
     if !patchnotes
         patchnotes := "(No patch notes available)"
 
-    answer := MsgBox("A new version is available!`n`nPatch notes:`n" patchnotes "`n`nCurrent version: v" CurrentVersion " | Latest version: v" latest "`n`nUpdate now?", "Update Available", "YesNo Icon!")
+    ; -- Step 3: Ask User to Confirm Update --
+    answer := MsgBox(
+        "A new version is available!`n`nPatch notes:`n" patchnotes
+        . "`n`nCurrent version: v" CurrentVersion " | Latest version: v" latest "`n`nUpdate now?",
+        "Update Available",
+        "YesNo Icon!"
+    )
     if (answer != "Yes")
         return
 
+    ; -- Step 4: Download New Script to Temp File --
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         whr.Open("GET", ScriptURL)
@@ -69,10 +83,11 @@ CheckForUpdate() {
         return
     }
 
+    ; -- Step 5: Replace Script and Restart as Admin --
     try {
         FileMove(TempFile, A_ScriptFullPath, true)
-        MsgBox("Update complete! Script will now restart.", "Update Successful", 0x40)
-        Run('*RunAs "' A_ScriptFullPath '"') ; Restart as admin!
+        MsgBox("Update complete! Script will now restart as administrator.", "Update Successful", 0x40)
+        Run('*RunAs "' A_ScriptFullPath '"') ; Always restart as admin!
         ExitApp
     } catch {
         MsgBox("Failed to apply update. Try updating manually.", "Update Error", 0x10)
@@ -80,15 +95,15 @@ CheckForUpdate() {
     }
 }
 
-; --- Auto-update at script start ---
+; --------- [ RUN THE UPDATER AT START ] ---------
 CheckForUpdate()
 
-; --- License Logic v5 ---
-
+; --------- [ LICENSE LOGIC V5 ] ---------
 LicenseURL := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/users.txt"
 hwid := GetHWID()
 today := FormatTime(, "yyyyMMdd")
 
+; -- Step 1: Download License List --
 try {
     http := ComObject("WinHttp.WinHttpRequest.5.1")
     http.Open("GET", LicenseURL)
@@ -100,6 +115,7 @@ try {
     ExitApp
 }
 
+; -- Step 2: Validate HWID and License Expiry --
 foundLicense := false
 isExpired := false
 clientName := ""
@@ -130,10 +146,19 @@ if foundLicense && isExpired {
     ExitApp
 }
 
+; -- Step 3: If no license, copy HWID & inform user --
 A_Clipboard := hwid
-MsgBox("Your HWID has been copied to the clipboard.`nSend it to the developer to activate your license:`n`n" hwid "`n`nIf you just sent your HWID, please wait 5-10 minutes and try again.", "License Request", 0x40)
+MsgBox(
+    "Your HWID has been copied to the clipboard.`n"
+    . "Send it to the developer to activate your license:`n`n"
+    . hwid
+    . "`n`nIf you just sent your HWID, please wait 5-10 minutes and try again.",
+    "License Request",
+    0x40
+)
 ExitApp
 
+; --------- [ HWID RETRIEVAL FUNCTION ] ---------
 GetHWID() {
     try {
         svc := ComObjGet("winmgmts:\\.\root\cimv2")
@@ -147,6 +172,7 @@ GetHWID() {
     return ""
 }
 
+; --------- [ WELCOME GUI FUNCTION ] ---------
 ShowWelcomeGui(clientName, licType, expiry, version) {
     myGui := Gui("+AlwaysOnTop", "Welcome!")
     myGui.SetFont("s11", "Segoe UI")
@@ -158,3 +184,5 @@ ShowWelcomeGui(clientName, licType, expiry, version) {
     myGui.AddButton("w120", "OK").OnEvent("Click", (*) => ExitApp())
     myGui.Show("w250 h210")
 }
+
+; --------- [ END OF SCRIPT ] ---------
