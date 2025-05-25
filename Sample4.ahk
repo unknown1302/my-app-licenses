@@ -88,8 +88,9 @@ CheckForUpdate() {
         FileMove(TempFile, A_ScriptFullPath, true)
         MsgBox("Update complete! Script will now restart as administrator.", "Update Successful", 0x40)
         ;Run('*RunAs "' A_ScriptFullPath '"')
-        cmd := "*RunAs " . Chr(34) . A_ScriptFullPath . Chr(34)
-        Run(cmd)
+        ;cmd := "*RunAs " . Chr(34) . A_ScriptFullPath . Chr(34)
+        ;Run(cmd)
+        Run(A_ScriptFullPath, "", "UseErrorLevel", "RunAs")
         ExitApp
     } catch {
         MsgBox("Failed to apply update. Try updating manually.", "Update Error", 0x10)
@@ -139,7 +140,7 @@ for line in StrSplit(usersTxt, "`n", "`r") {
 if foundLicense && !isExpired {
     ; Continue to show macro GUI
 } else if foundLicense && isExpired {
-    MsgBox("❌ Your license for '" clientName "' expired on: " expiry ".`nPlease contact the developer to renew or extend your license.", "License Expired", 0x10)
+    MsgBox("? Your license for '" clientName "' expired on: " expiry ".`nPlease contact the developer to renew or extend your license.", "License Expired", 0x10)
     ExitApp
 } else {
     A_Clipboard := hwid
