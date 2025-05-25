@@ -88,7 +88,8 @@ CheckForUpdate() {
         FileMove(TempFile, A_ScriptFullPath, true)
         MsgBox("Update complete! Script will now restart as administrator.", "Update Successful", 0x40)
         ;Run('*RunAs "' A_ScriptFullPath '"')
-        Run("*RunAs """ A_ScriptFullPath """")
+        cmd := "*RunAs " . Chr(34) . A_ScriptFullPath . Chr(34)
+        Run(cmd)
         ExitApp
     } catch {
         MsgBox("Failed to apply update. Try updating manually.", "Update Error", 0x10)
