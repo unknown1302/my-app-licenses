@@ -16,7 +16,7 @@ if !A_IsAdmin {
 ; ------------- [ VERSION & UPDATE CONSTANTS ] -------------
 CurrentVersion := "1"
 VersionURL     := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/version.txt"
-ScriptURL      := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/Sample3.ahk"
+ScriptURL      := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/Sample4.ahk"
 PatchNotesURL  := "https://raw.githubusercontent.com/unknown1302/my-app-licenses/main/patch.txt"
 TempFile       := A_ScriptDir "\update_temp.ahk"
 
